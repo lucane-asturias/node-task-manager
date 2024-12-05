@@ -10,10 +10,6 @@ app.use(express.json())
 app.use(userRouter)
 app.use(taskRouter)
 
-const router = new express.Router()
-
-app.use(router)
-
 app.listen(port, () => {
     console.log('Server is up on port ' + port)
 })
