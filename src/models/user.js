@@ -49,16 +49,6 @@ const userSchema = new mongoose.Schema({
     }]
 })
 
-userSchema.pre('save', async function (next) {
-    const user = this
-
-    if (user.isModified('password')) {
-        user.password = await bcrypt.hash(user.password, 8)
-    }
-
-    next()
-})
-
 userSchema.virtual('tasks', {
     ref: 'Task',
     localField: '_id',
@@ -90,12 +80,29 @@ userSchema.statics.findByCredentials = async (email, password) => {
 
     if (!user) throw new Error('Unable to login!')
 
-    const isMatch = bcrypt.isMatch(password, user.password)
+    const isMatch = bcrypt.compare(password, user.password)
 
     if (!isMatch) throw new Error('Unable to login!')
 
     return user
 }
+
+userSchema.pre('save', async function (next) {
+    const user = this
+
+    if (user.isModified('password')) {
+        user.password = await bcrypt.hash(user.password, 8)
+    }
+
+    next()
+})
+
+// Delete user tasks when user is removed
+userSchema.pre('remove', async function (next) {
+    const user = this
+    await Task.deleteMany({ owner: user._id })
+    next()
+})
 
 const User = mongoose.model('User', userSchema)
 
