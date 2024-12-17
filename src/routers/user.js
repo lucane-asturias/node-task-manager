@@ -5,7 +5,6 @@ const auth = require('../middleware/auth')
 const router = new express.Router()
 
 const upload = multer({
-    dest: 'avatar',
     limits: {
         fileSize: 1000000,
     },
@@ -62,8 +61,7 @@ router.post('/users/logoutAll', auth, async (req, res) => {
     } catch (e) {
         res.status(500).send()
     }
-}
-
+})
 
 router.get('/users/me', auth, async (req, res) => {
     res.send(req.user)
@@ -94,10 +92,18 @@ router.delete('/users/me', auth, async (req, res) => {
     }
 })
 
-router.post('/users/me/avatar', upload.single('avatar'), (req, res) => {
-    res.send()
+router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
+    req.user.avatar = req.file.buffer
+    await req.user.save()
+    res.status(200).send()
 }, (error, req, res, next) => {
     res.status(400).send({ error: error.message })
+})
+
+router.delete('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
+    req.user.avatar = undefined
+    await req.user.save()
+    res.status(200).send()
 })
 
 module.exports = router
