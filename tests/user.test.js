@@ -97,6 +97,13 @@ test('Should delete account for user', async () => {
         .expect(200)
 })
 
+test('Should not delete if user unauthenticated', async () => {
+    await request(app)
+        .patch('/users/me')
+        .send()
+        .expect(401)
+})
+
 test('Should update valid user fields', async () => {
     await request(app)
         .patch('/users/me')
@@ -108,10 +115,61 @@ test('Should update valid user fields', async () => {
     expect(user.name).toBe('Lucane') 
 })
 
+test('Should not update if user unauthenticated', async () => {
+    await request(app)
+        .patch('/users/me')
+        .send({ name: 'Lucane' })
+        .expect(401)
+})
+
 test('Should not update invalid user fields', async () => {
     await request(app)
         .patch('/users/me')
         .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
-        .send({ location: 'SP' })
+        .send({ location: 'Mars' })
         .expect(400)
 })
+
+const invalidCases = [
+    {
+        description: 'invalid email',
+        data: { name: 'Valid Name', email: 'notanemail', password: 'ValidPass123!' },
+        field: 'email',
+    },
+    {
+        description: 'invalid password (contains "password")',
+        data: { name: 'Valid Name', email: 'valid@example.com', password: 'password123' },
+        field: 'password',
+    },
+    {
+        description: 'missing name',
+        data: { name: '', email: 'valid@example.com', password: 'ValidPass123!' },
+        field: 'name',
+    },
+    {
+        description: 'negative age',
+        data: { name: 'Valid Name', email: 'valid@example.com', password: 'ValidPass123!', age: -5 },
+        field: 'age',
+    },
+]
+
+test.each(invalidCases)(
+    'Should not signup user with $description',
+    async ({ data }) => {
+        await request(app)
+            .post('/users')
+            .send(data)
+            .expect(400)
+    }
+)
+
+test.each(invalidCases)(
+    'Should not update user with $description',
+    async ({ field, data }) => {
+        await request(app)
+            .patch('/users/me')
+            .set('Authorization', `Bearer ${userOne.tokens[0].token}`)
+            .send({ [field]: data[field] })
+            .expect(400)
+    }
+)
